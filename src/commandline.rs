@@ -53,22 +53,24 @@ impl CommandLine {
         self
     }
 
-    /// Return String iterator of arguments that are not valid.
+    /// Return String iterator of arguments that are invalid.
     pub fn get_remaining_args(self) -> impl Iterator<Item = String> {
         env::args()
-            .filter(move |arg| !self.valid_arg(arg))
+            .filter(move |arg| !self.is_valid_arg(arg))
     }
 
     // An argument is valid if it begins with the optional
     // prefix, the separator pattern occurrs exactly once, 
     // and the separator separates two non-empty strings.
-    fn valid_arg(&self, arg: &str) -> bool {
-        let pref = self.get_prefix();
-        let matches_pref = arg.starts_with(&pref);
-        let valid_lens = arg[pref.len()..].split(&self.separator)
-            .map(|s| if s.is_empty() { 3 } else { 1 })
-            .sum::<i32>() == 2;
-        matches_pref && valid_lens
+    fn is_valid_arg(&self, arg: &str) -> bool {
+        let prefix = self.get_prefix();
+        let matches_pref = arg.starts_with(&prefix);
+        if matches_pref {
+            return arg[prefix.len()..].split(&self.separator)
+                .map(|s| if s.is_empty() { 3 } else { 1 })
+                .sum::<i32>() == 2;
+        }
+        false
     }
 
     fn get_prefix(&self) -> String {
@@ -84,7 +86,7 @@ impl Default for CommandLine {
         CommandLine {
             prefix: None,
             separator: String::from("="),
-            ignore_invalid: false
+            ignore_invalid: false,
         }
     }
 }
@@ -101,13 +103,14 @@ impl Source for CommandLine {
         let prefix_pattern = self.get_prefix();
 
         for arg in env::args() {
-            let valid_arg = self.valid_arg(&arg);
 
-            if !valid_arg && !self.ignore_invalid {
-                return Err(ConfigError::Message(format!("Invalid commandline arg: '{}'", arg)));
-            } else if !valid_arg {
+            if !self.is_valid_arg(&arg) {
+                if !self.ignore_invalid {
+                    return Err(ConfigError::Message(format!("Invalid commandline arg: '{}'", arg)));
+                }
+
                 continue;
-            }
+            } 
 
             let parts: Vec<&str> = arg.split(&self.separator).collect();
 
