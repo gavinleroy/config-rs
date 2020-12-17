@@ -64,8 +64,7 @@ impl CommandLine {
     // and the separator separates two non-empty strings.
     fn is_valid_arg(&self, arg: &str) -> bool {
         let prefix = self.get_prefix();
-        let matches_pref = arg.starts_with(&prefix);
-        if matches_pref {
+        if arg.starts_with(&prefix) {
             return arg[prefix.len()..].split(&self.separator)
                 .map(|s| if s.is_empty() { 3 } else { 1 })
                 .sum::<i32>() == 2;
